@@ -15,6 +15,20 @@ import (
 
 var scraperWidgetTemplate = mustParseTemplate("scraper.html", "widget-base.html")
 
+const scraperAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+
+// scraperHTTPClient uses a longer timeout than defaultHTTPClient (5s): full HTML
+// pages are much heavier than API responses. A GitHub repo page is ~300KB and
+// regularly takes over 5s to download, which surfaced as "context deadline
+// exceeded" instead of a selector problem.
+var scraperHTTPClient = &http.Client{
+	Transport: &http.Transport{
+		MaxIdleConnsPerHost: 10,
+		Proxy:               http.ProxyFromEnvironment,
+	},
+	Timeout: 15 * time.Second,
+}
+
 type scraperWidget struct {
 	widgetBase       `yaml:",inline"`
 	Items            []scraperItem `yaml:"items"`
@@ -136,9 +150,11 @@ func (widget *scraperWidget) scrapeItemTask(ctx context.Context, item scraperIte
 	}
 
 	req.Header.Set("User-Agent", userAgentString)
+	req.Header.Set("Accept", scraperAccept)
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
 	// Execute request
-	resp, err := defaultHTTPClient.Do(req)
+	resp, err := scraperHTTPClient.Do(req)
 	if err != nil {
 		return result, fmt.Errorf("failed to fetch page: %w", err)
 	}

@@ -49,7 +49,11 @@ type requestDoer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-var userAgentString = "dash-dash-dash/" + buildVersion
+// A real browser user agent. Sites with bot protection (Mozilla Add-ons behind
+// Fastly, GitHub, Cloudflare-fronted feeds) answer "dash-dash-dash/<version>"
+// with a 200 challenge page or a 403, so every outbound widget request
+// identifies as Chrome.
+var userAgentString = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
 
 func decodeJsonFromRequest[T any](client requestDoer, request *http.Request) (T, error) {
 	var result T
